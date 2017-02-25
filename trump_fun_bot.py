@@ -236,31 +236,38 @@ async def list_replacements(message, rasa_dict):
 	await client.send_message(message.channel, "\n".join(repl_txts))
 
 async def add_replacement(message,rasa_dict):
+	search_entity = None
+	replace_entity = None
 
-	if "search_text" in rasa_dict and "replace_text" in rasa_dict:
+	if len(rasa_dict['entities'] == 2):
+		for entity in rasa_dict['entities']:
+			if entity['entity'] == 'search_text':
+				search_entity = entity
+			elif entity['entity'] == 'replace_text':
+				replace_entity = entity
+
+	if search_entity and replace_entity:
 		print("Adding replacement")
 		repl = get_tweet_replacements()
 				
-		new_repl_key, new_repl_val = rasa_dict["search text"], rasa_dict["replace_text"]
+		new_repl_key = search_entity['value']
+		new_repl_val = replace_entity['value']
 				
 		repl[new_repl_key] = new_repl_val
 		save_tweet_replacements(repl)
 
-				matched_tweet = get_tweet_with_text(new_repl_key)
+		matched_tweet = get_tweet_with_text(new_repl_key)
 
-				if matched_tweet != None:
-						print("Sending found tweet")
-						await client.send_message(message.channel, replace_tweet_text(matched_tweet.text))
-				else:
-						print("No tweets matching, trying posts")
-						matched_post = get_reddit_science_post_with_text(new_repl_key)
+		if matched_tweet != None:
+				print("Sending found tweet")
+				await client.send_message(message.channel, replace_tweet_text(matched_tweet.text))
+		
+		matched_post = get_reddit_science_post_with_text(new_repl_key)
 
-						if matched_post != None:
-								print("Sending found post")
+		if matched_post != None:
+				print("Sending found post")
 				await client.send_message(message.channel, replace_tweet_text(matched_post.title))
-						else:
-								print("No post matching either")
-
+		
 
 async def send_science_post(message, rasa_dict):
 	posts = get_reddit_science_posts(count=50)
