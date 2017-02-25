@@ -50,8 +50,8 @@ reddit_client_id = os.environ['REDDIT_CLIENT_ID']
 reddit_client_secret = os.environ['REDDIT_CLIENT_SECRET']
 
 reddit = praw.Reddit(client_id=reddit_client_id,
-                     client_secret=reddit_client_secret,
-                     user_agent='my user agent')
+					 client_secret=reddit_client_secret,
+					 user_agent='my user agent')
 
 client = discord.Client()
 
@@ -240,26 +240,26 @@ async def add_replacement(message,rasa_dict):
 	if "search_text" in rasa_dict and "replace_text" in rasa_dict:
 		print("Adding replacement")
 		repl = get_tweet_replacements()
-                
+				
 		new_repl_key, new_repl_val = rasa_dict["search text"], rasa_dict["replace_text"]
-                
+				
 		repl[new_repl_key] = new_repl_val
 		save_tweet_replacements(repl)
 
-                matched_tweet = get_tweet_with_text(new_repl_key)
+				matched_tweet = get_tweet_with_text(new_repl_key)
 
-                if matched_tweet != None:
-                        print("Sending found tweet")
-                        await client.send_message(message.channel, replace_tweet_text(matched_tweet.text))
-                else:
-                        print("No tweets matching, trying posts")
-                        matched_post = get_reddit_science_post_with_text(new_repl_key)
+				if matched_tweet != None:
+						print("Sending found tweet")
+						await client.send_message(message.channel, replace_tweet_text(matched_tweet.text))
+				else:
+						print("No tweets matching, trying posts")
+						matched_post = get_reddit_science_post_with_text(new_repl_key)
 
-                        if matched_post != None:
-                                print("Sending found post")
+						if matched_post != None:
+								print("Sending found post")
 				await client.send_message(message.channel, replace_tweet_text(matched_post.title))
-                        else:
-                                print("No post matching either")
+						else:
+								print("No post matching either")
 
 
 async def send_science_post(message, rasa_dict):
