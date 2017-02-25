@@ -208,19 +208,20 @@ async def on_ready():
 
 	print(get_tweet_replacements())
 
-def send_test_message(message,rasa_dict):
+async def send_test_message(message,rasa_dict):
 	print("Sending test message")
 	print(str(get_server(client)).encode('utf-8'))
+
 	await client.send_message(message.channel, content='It works, of course it works. It was made in America. It\'s the best!')
 
-def send_latest_tweet(message,rasa_dict):
+async def send_latest_tweet(message,rasa_dict):
 	tweets = get_trump_tweets()
 	latest_tweet = rando.choice(tweets)
 
 	msg_text = replace_tweet_text(latest_tweet.text)
 	await client.send_message(message.channel, msg_text)
 
-def list_replacements(message, rasa_dict):
+async def list_replacements(message, rasa_dict):
 	repl = get_tweet_replacements()
 	repl_txts = []
 	for key in repl:
@@ -228,7 +229,7 @@ def list_replacements(message, rasa_dict):
 
 	await client.send_message(message.channel, "\n".join(repl_txts))
 
-def add_replacement(message,rasa_dict):
+async def add_replacement(message,rasa_dict):
 	parts = message.content.split(' ')
 
 	parts_match = re.match("!replace \"(.+)\" \"(.+)\"", message_text)
@@ -259,7 +260,7 @@ def add_replacement(message,rasa_dict):
 			else:
 				print("No post matching either")
 
-def send_science_post(message, rasa_dict):
+async def send_science_post(message, rasa_dict):
 	posts = get_reddit_science_posts(count=50)
 	latest_post = rando.choice(posts)
 
@@ -282,12 +283,12 @@ async def on_message(message):
 		rasa_resp = interpreter.parse(message_text)
 		intent = rasa_resp["intent"]
 
-		funcs = ["test" : send_test_message,
+		funcs = {"test" : send_test_message,
 				  "tweet" : send_latest_tweet,
-				  "replace" : add_replacement]
+				  "replace" : add_replacement}
 
 		if (intent in funcs):
-			funcs[intent](message,rasa_dict)
+			await funcs[intent](message,rasa_dict)
 		elif message_text == "!replace":
 			list_replacements()
 		elif message_text == "I want to build a wall!":
@@ -317,7 +318,7 @@ async def on_message(message):
 		else:
 			print("ERRRR")
 			await client.send_message(message.channel, "Uuuh, why should I be talkin' to you?")
-			
+
 def call_in_background(target, *, loop=None, executor=None):
 	"""Schedules and starts target callable as a background task
 
