@@ -12,9 +12,15 @@ import praw
 import random
 
 from rasa_nlu.interpreters.mitie_interpreter import MITIEInterpreter
-metadata = json.loads(open('/home/dylan/serverprogs/rasa_nlu/data/models/model_latest/metadata.json'.encode('utf8')).read())
+metadata = json.loads(open('/home/dylan/serverprogs/rasa_nlu/data/models/model_latest/metadata.json').read())
 print(metadata)
-interpreter = MITIEInterpreter(intent_classifier=metadata['intent_classifier'])
+#interpreter = MITIEInterpreter(**metadata)
+
+interpreter = MITIEInterpreter(
+	intent_classifier=metadata['intent_classifier'].encode('utf-8'), 
+	entity_extractor=metadata['entity_extractor'].encode('utf-8'), 
+	feature_extractor=metadata['feature_extractor'].encode('utf-8'))
+print(interpreter)
 
 DEBUG = False
 
@@ -230,35 +236,31 @@ async def list_replacements(message, rasa_dict):
 	await client.send_message(message.channel, "\n".join(repl_txts))
 
 async def add_replacement(message,rasa_dict):
-	parts = message.content.split(' ')
 
-	parts_match = re.match("!replace \"(.+)\" \"(.+)\"", message_text)
-	if parts_match == None or len(parts_match.groups()) != 2:
-		print(parts_match, parts_match.groups())
-		print(message_text)
-		await client.send_message(message.channel, "Your message is a steaming pile of garbage. GRAB IT BY THE PUSSY!!\nUsage: !replace \"<SEARCH>\" \"<DESTROY>\"")
-	else:
-
+	if "search_text" in rasa_dict and "replace_text" in rasa_dict:
 		print("Adding replacement")
 		repl = get_tweet_replacements()
-		new_repl_key, new_repl_val = parts_match.groups()
+                
+		new_repl_key, new_repl_val = rasa_dict["search text"], rasa_dict["replace_text"]
+                
 		repl[new_repl_key] = new_repl_val
 		save_tweet_replacements(repl)
 
-		matched_tweet = get_tweet_with_text(new_repl_key)
+                matched_tweet = get_tweet_with_text(new_repl_key)
 
-		if matched_tweet != None:
-			print("Sending found tweet")
-			await client.send_message(message.channel, replace_tweet_text(matched_tweet.text))
-		else:
-			print("No tweets matching, trying posts")
-			matched_post = get_reddit_science_post_with_text(new_repl_key)
+                if matched_tweet != None:
+                        print("Sending found tweet")
+                        await client.send_message(message.channel, replace_tweet_text(matched_tweet.text))
+                else:
+                        print("No tweets matching, trying posts")
+                        matched_post = get_reddit_science_post_with_text(new_repl_key)
 
-			if matched_post != None:
-				print("Sending found post")
+                        if matched_post != None:
+                                print("Sending found post")
 				await client.send_message(message.channel, replace_tweet_text(matched_post.title))
-			else:
-				print("No post matching either")
+                        else:
+                                print("No post matching either")
+
 
 async def send_science_post(message, rasa_dict):
 	posts = get_reddit_science_posts(count=50)
@@ -282,13 +284,15 @@ async def on_message(message):
 		 
 		rasa_resp = interpreter.parse(message_text)
 		intent = rasa_resp["intent"]
+		print(rasa_resp)
 
-		funcs = {"test" : send_test_message,
-				  "tweet" : send_latest_tweet,
-				  "replace" : add_replacement}
+		funcs = {"debub/test" : send_test_message,
+					"request/science" : send_science_post,
+				  "request/tweet" : send_latest_tweet,
+				  "add_replacement" : add_replacement}
 
 		if (intent in funcs):
-			await funcs[intent](message,rasa_dict)
+			await funcs[intent](message,rasa_resp)
 		elif message_text == "!replace":
 			list_replacements()
 		elif message_text == "I want to build a wall!":
@@ -364,5 +368,7 @@ async def check_messages():
 	# call_in_background(check_messages())
 
 
+
+print(interpreter.parse("Drop some science"))
 client.loop.create_task(check_messages())
 client.run(discord_api_key)
