@@ -246,20 +246,20 @@ async def add_replacement(message,rasa_dict):
 		repl[new_repl_key] = new_repl_val
 		save_tweet_replacements(repl)
 
-				matched_tweet = get_tweet_with_text(new_repl_key)
+		matched_tweet = get_tweet_with_text(new_repl_key)
 
-				if matched_tweet != None:
-						print("Sending found tweet")
-						await client.send_message(message.channel, replace_tweet_text(matched_tweet.text))
-				else:
-						print("No tweets matching, trying posts")
-						matched_post = get_reddit_science_post_with_text(new_repl_key)
+		if matched_tweet != None:
+			print("Sending found tweet")
+			await client.send_message(message.channel, replace_tweet_text(matched_tweet.text))
+		else:
+			print("No tweets matching, trying posts")
+			matched_post = get_reddit_science_post_with_text(new_repl_key)
 
-						if matched_post != None:
-								print("Sending found post")
+			if matched_post != None:
+				print("Sending found post")
 				await client.send_message(message.channel, replace_tweet_text(matched_post.title))
-						else:
-								print("No post matching either")
+			else:
+				print("No post matching either")
 
 
 async def send_science_post(message, rasa_dict):
