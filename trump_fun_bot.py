@@ -208,6 +208,64 @@ async def on_ready():
 
 	print(get_tweet_replacements())
 
+def send_test_message(message,rasa_dict):
+	print("Sending test message")
+	print(str(get_server(client)).encode('utf-8'))
+	await client.send_message(message.channel, content='It works, of course it works. It was made in America. It\'s the best!')
+
+def send_latest_tweet(message,rasa_dict):
+	tweets = get_trump_tweets()
+	latest_tweet = rando.choice(tweets)
+
+	msg_text = replace_tweet_text(latest_tweet.text)
+	await client.send_message(message.channel, msg_text)
+
+def list_replacements(message, rasa_dict):
+	repl = get_tweet_replacements()
+	repl_txts = []
+	for key in repl:
+		repl_txts.append("%s -> %s" % (key, repl[key]))
+
+	await client.send_message(message.channel, "\n".join(repl_txts))
+
+def add_replacement(message,rasa_dict):
+	parts = message.content.split(' ')
+
+	parts_match = re.match("!replace \"(.+)\" \"(.+)\"", message_text)
+	if parts_match == None or len(parts_match.groups()) != 2:
+		print(parts_match, parts_match.groups())
+		print(message_text)
+		await client.send_message(message.channel, "Your message is a steaming pile of garbage. GRAB IT BY THE PUSSY!!\nUsage: !replace \"<SEARCH>\" \"<DESTROY>\"")
+	else:
+
+		print("Adding replacement")
+		repl = get_tweet_replacements()
+		new_repl_key, new_repl_val = parts_match.groups()
+		repl[new_repl_key] = new_repl_val
+		save_tweet_replacements(repl)
+
+		matched_tweet = get_tweet_with_text(new_repl_key)
+
+		if matched_tweet != None:
+			print("Sending found tweet")
+			await client.send_message(message.channel, replace_tweet_text(matched_tweet.text))
+		else:
+			print("No tweets matching, trying posts")
+			matched_post = get_reddit_science_post_with_text(new_repl_key)
+
+			if matched_post != None:
+				print("Sending found post")
+				await client.send_message(message.channel, replace_tweet_text(matched_post.title))
+			else:
+				print("No post matching either")
+
+def send_science_post(message, rasa_dict):
+	posts = get_reddit_science_posts(count=50)
+	latest_post = rando.choice(posts)
+
+	msg_text = replace_tweet_text(latest_post.title)
+
+	await client.send_message(message.channel, msg_text)
 
 @client.event
 async def on_message(message):
@@ -224,63 +282,14 @@ async def on_message(message):
 		rasa_resp = interpreter.parse(message_text)
 		intent = rasa_resp["intent"]
 
-		if message_text.startswith('!test'):
-			print("Sending test message")
-			print(str(get_server(client)).encode('utf-8'))
-			await client.send_message(message.channel, content='It works, of course it works. It was made in America. It\'s the best!')
-		elif message_text.startswith('!tweet'):
-			tweets = get_trump_tweets()
-			latest_tweet = rando.choice(tweets)
+		funcs = ["test" : send_test_message,
+				  "tweet" : send_latest_tweet,
+				  "replace" : add_replacement]
 
-			msg_text = replace_tweet_text(latest_tweet.text)
-
-			await client.send_message(message.channel, msg_text)
+		if (intent in funcs):
+			funcs[intent](message,rasa_dict)
 		elif message_text == "!replace":
-			repl = get_tweet_replacements()
-			repl_txts = []
-			for key in repl:
-				repl_txts.append("%s -> %s" % (key, repl[key]))
-
-			await client.send_message(message.channel, "\n".join(repl_txts))
-		elif message_text.startswith('!replace'):
-			# TODO: Use regex to allow spaces
-			parts = message.content.split(' ')
-
-			parts_match = re.match("!replace \"(.+)\" \"(.+)\"", message_text)
-			if parts_match == None or len(parts_match.groups()) != 2:
-				print(parts_match, parts_match.groups())
-				print(message_text)
-				await client.send_message(message.channel, "Your message is a steaming pile of garbage. GRAB IT BY THE PUSSY!!\nUsage: !replace \"<SEARCH>\" \"<DESTROY>\"")
-			else:
-
-				print("Adding replacement")
-				repl = get_tweet_replacements()
-				new_repl_key, new_repl_val = parts_match.groups()
-				repl[new_repl_key] = new_repl_val
-				save_tweet_replacements(repl)
-
-				matched_tweet = get_tweet_with_text(new_repl_key)
-
-				if matched_tweet != None:
-					print("Sending found tweet")
-					await client.send_message(message.channel, replace_tweet_text(matched_tweet.text))
-				else:
-					print("No tweets matching, trying posts")
-					matched_post = get_reddit_science_post_with_text(new_repl_key)
-
-					if matched_post != None:
-						print("Sending found post")
-						await client.send_message(message.channel, replace_tweet_text(matched_post.title))
-					else:
-						print("No post matching either")
-
-		elif message_text.startswith('!science'):
-			posts = get_reddit_science_posts(count=50)
-			latest_post = rando.choice(posts)
-
-			msg_text = replace_tweet_text(latest_post.title)
-
-			await client.send_message(message.channel, msg_text)
+			list_replacements()
 		elif message_text == "I want to build a wall!":
 			wall_ids = get_known_wall_ids()
 			if message.author.id not in wall_ids:
@@ -308,6 +317,7 @@ async def on_message(message):
 		else:
 			print("ERRRR")
 			await client.send_message(message.channel, "Uuuh, why should I be talkin' to you?")
+			
 def call_in_background(target, *, loop=None, executor=None):
 	"""Schedules and starts target callable as a background task
 
