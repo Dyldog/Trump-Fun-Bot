@@ -363,19 +363,17 @@ async def check_messages():
 	
 		for tweet in tweets:
 			await client.send_message(channel , replace_tweet_text(tweet.text))
+			break
 
 		posts = get_new_reddit_science_posts()
 		print("Got %d posts..." % len(posts))
 
 		for post in posts:
 			await client.send_message(channel , replace_tweet_text(post.title))
+			break
 
 
 		await asyncio.sleep(60) # task runs every 60 seconds
-
-
-	for tweet in tweets:
-		await client.send_message(get_server(client) , replace_tweet_text(tweet.text))
 
 	# await asyncio.sleep(10)
 	# call_in_background(check_messages())
